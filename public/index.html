@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voice Agent</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; }
+    button { font-size: 1.5rem; padding: 1rem 2rem; border-radius: 12px; }
+    #log { margin-top: 2rem; text-align: left; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <button id="mic">🎤 Speak</button>
+  <div id="log"></div>
+  <script>
+    const log = (s) => document.getElementById("log").textContent += s + "\n";
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { log("Speech recognition not supported. Use Chrome on Android."); }
+
+    document.getElementById("mic").onclick = () => {
+      const rec = new SR();
+      rec.lang = "en-IN";
+      rec.onresult = async (e) => {
+        const text = e.results[0][0].transcript;
+        log("You: " + text);
+        const res = await fetch("/.netlify/functions/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const { reply } = await res.json();
+        log("Agent: " + reply);
+        speechSynthesis.speak(new SpeechSynthesisUtterance(reply));
+      };
+      rec.onerror = (e) => log("Mic error: " + e.error);
+      rec.start();
+    };
+  </script>
+</body>
+</html>
